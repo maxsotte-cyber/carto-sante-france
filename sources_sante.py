@@ -62,7 +62,9 @@ NOMS_DEP = {
     "90": "Territoire de Belfort", "91": "Essonne", "92": "Hauts-de-Seine",
     "93": "Seine-Saint-Denis", "94": "Val-de-Marne", "95": "Val-d'Oise",
     "971": "Guadeloupe", "972": "Martinique", "973": "Guyane", "974": "La Réunion",
-    "975": "Saint-Pierre-et-Miquelon", "976": "Mayotte",
+    "975": "Saint-Pierre-et-Miquelon", "976": "Mayotte", "977": "Saint-Barthélemy",
+    "978": "Saint-Martin", "986": "Wallis-et-Futuna", "987": "Polynésie française",
+    "988": "Nouvelle-Calédonie",
 }
 
 
@@ -95,10 +97,10 @@ def departement_de(code_commune: str, code_postal: str = "") -> str:
     """Code département à partir du code commune INSEE (ou, à défaut, du code postal)."""
     cc = (code_commune or "").strip().upper()
     if len(cc) == 5:
-        return cc[:3] if cc.startswith("97") else cc[:2]
+        return cc[:3] if cc[:2] in ("97", "98") else cc[:2]
     cp = (code_postal or "").strip()
     if len(cp) == 5 and cp.isdigit():
-        if cp.startswith("97"):
+        if cp[:2] in ("97", "98"):
             return cp[:3]
         if cp.startswith("20"):
             return "2A" if int(cp) < 20200 else "2B"
