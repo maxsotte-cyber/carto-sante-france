@@ -1,0 +1,81 @@
+# Met à jour les deux cartes deux fois par semaine et les publie sur GitHub Pages.
+# Tout se passe sur les serveurs de GitHub : aucun ordinateur n'a besoin d'être allumé.
+
+name: Mise à jour des cartes
+
+on:
+  schedule:
+    - cron: "17 3 * * 1,4"      # lundi et jeudi à 3 h 17 (heure UTC)
+  workflow_dispatch:            # bouton « Run workflow » pour lancer à la main
+  push:
+    branches: [main]
+    paths: ["*.py", "requirements.txt", "accueil/**", ".github/workflows/**"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les bibliothèques
+        run: pip install -r requirements.txt
+
+      # Les adresses déjà géocodées lors des lancements précédents
+      - name: Récupérer le cache de géocodage
+        uses: actions/cache/restore@v4
+        with:
+          path: donnees/geocodage_cache.csv
+          key: geocodage-${{ github.run_id }}
+          restore-keys: geocodage-
+
+      - name: Carte des maisons de santé
+        run: python carte_maisons_sante.py --sortie site/maisons-sante/index.html
+
+      # Au premier lancement, des centaines de milliers d'adresses sont à géocoder :
+      # au-delà de 3 heures, les adresses restantes sont placées au centre de leur
+      # commune et géocodées lors des mises à jour suivantes.
+      - name: Carte des professionnels de santé
+        run: python carte_professionnels_sante.py --sortie site/professionnels --geocodage-minutes 180
+
+      - name: Sauvegarder le cache de géocodage
+        if: always() && hashFiles('donnees/geocodage_cache.csv') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: donnees/geocodage_cache.csv
+          key: geocodage-${{ github.run_id }}
+
+      - name: Page d'accueil
+        run: sed "s|__DATE__|$(TZ=Europe/Paris date +%d/%m/%Y)|" accueil/index.html > site/index.html
+
+      - name: Préparer la publication
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publier:
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Publier sur GitHub Pages
+        id: deploiement
+        uses: actions/deploy-pages@v4

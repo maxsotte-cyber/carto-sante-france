@@ -1,0 +1,13 @@
+# Données téléchargées et cache de géocodage (recréés à chaque lancement)
+donnees/
+
+# Cartes générées
+site/
+carte_professionnels/
+carte_maisons_sante.html
+
+# Python et éditeurs
+__pycache__/
+venv/
+.venv/
+.idea/
